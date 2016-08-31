@@ -1,8 +1,12 @@
 # coding=utf-8
 from __future__ import unicode_literals
-from .models import BookingHouse, BookingPerson
+
+from django.utils.translation import ugettext_lazy as _
+
+from .models import BookingHouse, BookingPerson,BookingRoom,Booking
 from django.contrib import admin
-# Register your models here.
+
+
 class BookingHouseAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
@@ -10,3 +14,5 @@ class BookingHouseAdmin(admin.ModelAdmin):
         return False
 admin.site.register(BookingHouse,BookingHouseAdmin)
 admin.site.register(BookingPerson)
+admin.site.register(BookingRoom)
+admin.site.register(Booking)
