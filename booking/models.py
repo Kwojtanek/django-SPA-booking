@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, UserManager
@@ -83,6 +84,8 @@ class BookingPerson(AbstractBaseUser):
     additional_info = models.TextField(blank=True, verbose_name=_('Dodatkowe informacje'))
     date_joined = models.DateTimeField(_('Data utworzenia'), default=timezone.now)
 
+
+
     is_active = models.BooleanField(
         _('Aktywny'),
         default=True,
@@ -124,7 +127,7 @@ class BookingPerson(AbstractBaseUser):
 
 class BookingRoom(models.Model):
     """
-    Model contains informations about room that will be booked
+    Model contains information about room that will be booked
     """
     name = models.CharField(max_length=64, default='Pokój', verbose_name=_('Nazwa pokoju'))
     level = models.PositiveIntegerField(verbose_name=_('Piętro'), null=True)
@@ -135,7 +138,7 @@ class BookingRoom(models.Model):
     internet = models.BooleanField(verbose_name=_("WiFi/internet"), default=True)
     bed = models.CharField(verbose_name=_('Łóżka'), max_length=64, blank=True)
     max_people = models.PositiveIntegerField(verbose_name=_('Maksymalna ilość osób'), null=True)
-    price = models.PositiveIntegerField(verbose_name='Cena za jedną dobę',null=True)
+    price = models.PositiveIntegerField(verbose_name='Cena za jedną dobę', null=True)
 
     def __unicode__(self):
         return self.name
@@ -147,6 +150,10 @@ class BookingRoom(models.Model):
         verbose_name_plural = "Pokoje"
         verbose_name = "Pokój"
 
+
+class AfterTodayManager(models.Manager):
+    def get_queryset(self):
+        return super(AfterTodayManager, self).get_queryset().filter(date_to__gte=timezone.now())
 
 class Booking(models.Model):
     """
@@ -164,50 +171,56 @@ class Booking(models.Model):
     reservation_date = models.DateTimeField(default=timezone.now, verbose_name=_('Data dokonania rezerwacji.'))
     date_from = models.DateField(verbose_name=_('Rezerwacja od'))
     date_to = models.DateField(verbose_name=_('Rezerwacja do'))
+    additional_info = models.TextField(verbose_name='Dodatkowe informacje', null=True)
 
     def days_count(self):
         return (self.date_to - self.date_from).days
 
     overall_price = models.PositiveIntegerField(verbose_name=_('Cena za cały pobyt'), blank=True, null=True)
 
-    def is_available(self):
+    # --------------Managers-------------#
+    objects = models.Manager()
+    after_today = AfterTodayManager()
+
+    def is_colliding(self):
         """
-        :return: Validation error if room is not available
+        :return: query of objects with colliding bookings
         Should it be in this logic?
         """
-        # If Booking is not empty
-        # Check if it's made booking for this room
+        # If Booking is not empty for this room
         # and date_from is not in range date_from to date_to
         # and date_to is not in range date_from to date_to
-        booking = Booking.objects.all()
-        if booking:
-            availb_rooms = booking.filter(reservation_date__gte=timezone.now(),
-                                          booking_room_id=self.booking_room_id,
-                                          date_from__range=[self.date_from, self.date_to],
-                                          date_to__range=[self.date_from, self.date_to])
-            if availb_rooms:
-                return True
+
+        #Excludes self from results coz' self cant colide with itself
+        if self.pk:
+            booking = Booking.after_today.exclude(pk=self.pk)
         else:
-            return True
+            booking = Booking.after_today.all()
+        booking = booking.filter(booking_room__id=self.booking_room.id)
+        #Data przyjazdu większa niż data wyjazdu i tyle?
+        # booking = Booking.after_today.filter(Q(booking_room__id=self.booking_room.id) & ~Q(date_from__range=[self.date_from, self.date_to]) | ~Q(date_to__range=[self.date_from, self.date_to]))
+        return booking
 
     def clean(self):
-        self.is_available()
+        if self.is_colliding():
+            raise ValidationError('Data dla %s jest już zajęta' % self.booking_room.name)
         if self.days_count() <= 0:
             raise ValidationError('Data przyjazdu nie może być taka sama ani późniejsza niż data wyjazdu')
 
     def save(self, *args, **kwargs):
+        if self.is_colliding():
+            raise ValidationError('Data dla %s jest już zajęta' % self.booking_room.name)
+
         # If no value for overall price is provided it will count it
         if self.overall_price is None:
             self.overall_price = self.booking_room.price * self.days_count()
         return super(Booking, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return 'rezerwujący %s, %s. od %s do %s' % (self.booking_person, self.booking_room,
-                                                    self.date_from, self.date_to)
+        return 'rezerwujący %s, %s. od %s do %s' % (self.booking_person, self.booking_room, self.date_from, self.date_to)
 
     def __str__(self):
-        return 'rezerwujący %s, %s. od %s do %s' % (self.booking_person, self.booking_room,
-                                                    self.date_from, self.date_to)
+        return 'rezerwujący %s, %s. od %s do %s' % (self.booking_person, self.booking_room, self.date_from, self.date_to)
 
     class Meta:
         verbose_name_plural = "Rezerwacje"

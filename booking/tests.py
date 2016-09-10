@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils import timezone
 from .models import BookingHouse, BookingPerson, BookingRoom, Booking
 import datetime
 # Create your tests here.
@@ -40,7 +41,10 @@ class BookingRoomTestCase(TestCase):
         pokoj = BookingRoom.objects.get(name='Pokój')
         self.assertEqual(pokoj.pk,1)
 
-class BookingTestCase(TestCase):
+class AvailabilityTestCase(TestCase):
+    """
+    Class tests availability Manager returns
+    """
     def setUp(self):
         BookingPerson.objects.create(email='Jacie@gmail.com',password='qwe123rtY')
         BookingPerson.objects.create(email='Gacie@gmail.com', password='qwe123rtY')
@@ -48,21 +52,70 @@ class BookingTestCase(TestCase):
         BookingRoom.objects.create(name='Pokój', price=45)
         BookingRoom.objects.create(name='Apartament', price=100)
 
-        Booking.objects.create(booking_person=BookingPerson.objects.get(pk=1),booking_room=BookingRoom.objects.get(pk=1),
-                           date_from=datetime.date(2015,8,31), date_to=datetime.date(2015,8,31))
-        Booking.objects.create(booking_person=BookingPerson.objects.get(pk=1),booking_room=BookingRoom.objects.get(pk=1),
-                           date_from=datetime.date(2015,9,1), date_to=datetime.date(2015,9,3))
+        # Booking.objects.create(additional_info='t1',
+        #                        booking_person=BookingPerson.objects.get(pk=1),
+        #                        booking_room=BookingRoom.objects.get(pk=1),
+        #                        date_from=timezone.now().date() - timezone.timedelta(1),
+        #                        date_to=timezone.now().date()  + timezone.timedelta(12))
+        # Booking.objects.create(additional_info='t2',
+        #                        booking_person=BookingPerson.objects.get(pk=1),
+        #                        booking_room=BookingRoom.objects.get(pk=2),
+        #                        date_from=timezone.now().date(),
+        #                        date_to=timezone.now().date()  + timezone.timedelta(12))
+        # Booking.objects.create(additional_info='t3',
+        #                        booking_person=BookingPerson.objects.get(pk=1),
+        #                        booking_room=BookingRoom.objects.get(pk=1),
+        #                        date_from=timezone.now().date() + timezone.timedelta(12),
+        #                        date_to=timezone.now().date() + datetime.timedelta(13))
+        #
+        # Booking.objects.create(additional_info='t4',
+        #                        booking_person=BookingPerson.objects.get(pk=1),
+        #                        booking_room=BookingRoom.objects.get(pk=1),
+        #                        date_from=timezone.now().date() - timezone.timedelta(12),
+        #                        date_to=timezone.now().date() + timezone.timedelta(12))
+        # Booking.objects.create(additional_info='t5',
+        #                        booking_person=BookingPerson.objects.get(pk=1),
+        #                        booking_room=BookingRoom.objects.get(pk=2),
+        #                        date_from=timezone.now().date(),
+        #                        date_to=timezone.now().date()  + timezone.timedelta(12))
+        # Booking.objects.create(additional_info='t6',
+        #                        booking_person=BookingPerson.objects.get(pk=1),
+        #                        booking_room=BookingRoom.objects.get(pk=1),
+        #                        date_from=timezone.now().date() + timezone.timedelta(12),
+        #                        date_to=timezone.now().date() + datetime.timedelta(13))
     def test_instance(self):
-        Person1 = BookingPerson.objects.get(email='Jacie@gmail.com')
-        Person2 = BookingPerson.objects.get(email='Gacie@gmail.com')
-        Room1 = BookingRoom.objects.get(name='Pokój')
-        Room2 = BookingRoom.objects.get(name='Apartament')
-        Booking1 = Booking.objects.get(pk=1)
-        Booking2 = Booking.objects.get(pk=2)
-
-        self.assertRaises(ValidationError,lambda :Booking1.clean())
-        self.assertEqual(Booking2.days_count(),2)
-        self.assertEqual(Booking2.overall_price,90)
-
-    def test_availablity(self):
-        pass
+        #Test cases for is_colliding function:
+        #   -Theres no entries in db so :returns Empty query
+        #   -There is the same date reservation but different room :returns Empty Query
+        #   -There is booked room within range booking is trying to proceed
+        #   -There is different date same room :returns Empty Query
+        #   -There is booked room but ends with day booking starts :returns Empty Query
+        #   -There is booked room but starts with day booking ends :returns Empty Query
+        #   -Booking was changed and starts to collide with other
+        B1 = Booking(additional_info='t1',
+                                booking_person=BookingPerson.objects.get(pk=1),
+                                booking_room=BookingRoom.objects.get(pk=1),
+                                date_from=timezone.now().date() + timezone.timedelta(1),
+                                date_to=timezone.now().date()  + timezone.timedelta(12))
+        self.assertFalse(B1.is_colliding())
+        B1.save()
+        B2 = Booking(additional_info='t2',
+                               booking_person=BookingPerson.objects.get(pk=1),
+                               booking_room=BookingRoom.objects.get(pk=2),
+                               date_from=timezone.now().date(),
+                               date_to=timezone.now().date()  + timezone.timedelta(12))
+        self.assertFalse(B2.is_colliding())
+        B2.save()
+        self.assertFalse(B2.is_colliding())
+        B3 = Booking(additional_info='t3',
+                               booking_person=BookingPerson.objects.get(pk=1),
+                               booking_room=BookingRoom.objects.get(pk=1),
+                               date_from=timezone.now().date() + timezone.timedelta(5),
+                               date_to=timezone.now().date() + datetime.timedelta(13))
+        self.assertTrue(B3.is_colliding())
+        B4 = Booking(additional_info='t4',
+                               booking_person=BookingPerson.objects.get(pk=1),
+                               booking_room=BookingRoom.objects.get(pk=1),
+                               date_from=timezone.now().date() + timezone.timedelta(13),
+                               date_to=timezone.now().date() + datetime.timedelta(14))
+        self.assertFalse(B4.is_colliding())
