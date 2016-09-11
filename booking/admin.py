@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from django.utils.translation import ugettext_lazy as _
 
-from .models import BookingHouse, BookingPerson,BookingRoom,Booking
+from .models import BookingHouse, BookingPerson,BookingRoom,Booking, HousePhoto, RoomPhoto
 from django.contrib import admin
 
 
@@ -16,3 +16,5 @@ admin.site.register(BookingHouse,BookingHouseAdmin)
 admin.site.register(BookingPerson)
 admin.site.register(BookingRoom)
 admin.site.register(Booking)
+admin.site.register(HousePhoto)
+admin.site.register(RoomPhoto)

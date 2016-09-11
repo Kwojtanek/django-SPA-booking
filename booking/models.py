@@ -2,10 +2,9 @@
 from __future__ import unicode_literals
 
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, UserManager
+from django.contrib.auth.models import AbstractBaseUser, UserManager, User
 from django.utils import timezone
 from django.core.mail import send_mail
 
@@ -84,8 +83,6 @@ class BookingPerson(AbstractBaseUser):
     additional_info = models.TextField(blank=True, verbose_name=_('Dodatkowe informacje'))
     date_joined = models.DateTimeField(_('Data utworzenia'), default=timezone.now)
 
-
-
     is_active = models.BooleanField(
         _('Aktywny'),
         default=True,
@@ -93,6 +90,7 @@ class BookingPerson(AbstractBaseUser):
             'Wyznacza czy użytkownik jest aktywny. Zmień tę wartość zamiast usuwać użytkownika.'
         ),
     )
+
     is_confirmed = models.BooleanField(
         _('Potwierdzony email'),
         default=False,
@@ -155,6 +153,7 @@ class AfterTodayManager(models.Manager):
     def get_queryset(self):
         return super(AfterTodayManager, self).get_queryset().filter(date_to__gte=timezone.now())
 
+
 class Booking(models.Model):
     """
     Booking model should contain:
@@ -171,7 +170,7 @@ class Booking(models.Model):
     reservation_date = models.DateTimeField(default=timezone.now, verbose_name=_('Data dokonania rezerwacji.'))
     date_from = models.DateField(verbose_name=_('Rezerwacja od'))
     date_to = models.DateField(verbose_name=_('Rezerwacja do'))
-    additional_info = models.TextField(verbose_name='Dodatkowe informacje', null=True)
+    additional_info = models.TextField(verbose_name='Dodatkowe informacje', null=True, blank=True)
 
     def days_count(self):
         return (self.date_to - self.date_from).days
@@ -184,32 +183,34 @@ class Booking(models.Model):
 
     def is_colliding(self):
         """
-        :return: query of objects with colliding bookings
+        :return: True or false if overlaps other date range
         Should it be in this logic?
         """
         # If Booking is not empty for this room
-        # and date_from is not in range date_from to date_to
-        # and date_to is not in range date_from to date_to
-
-        #Excludes self from results coz' self cant colide with itself
+        # Excludes self from results coz' self cant collide with itself
+        # Takes in count only dates after today
         if self.pk:
             booking = Booking.after_today.exclude(pk=self.pk)
         else:
             booking = Booking.after_today.all()
         booking = booking.filter(booking_room__id=self.booking_room.id)
-        #Data przyjazdu większa niż data wyjazdu i tyle?
-        # booking = Booking.after_today.filter(Q(booking_room__id=self.booking_room.id) & ~Q(date_from__range=[self.date_from, self.date_to]) | ~Q(date_to__range=[self.date_from, self.date_to]))
-        return booking
 
-    def clean(self):
+        for b in booking:
+            if b.date_from < self.date_to and self.date_from < b.date_to:
+                return True
+        return False
+
+    def validate(self):
         if self.is_colliding():
             raise ValidationError('Data dla %s jest już zajęta' % self.booking_room.name)
         if self.days_count() <= 0:
             raise ValidationError('Data przyjazdu nie może być taka sama ani późniejsza niż data wyjazdu')
 
+    def clean(self):
+        self.validate()
+
     def save(self, *args, **kwargs):
-        if self.is_colliding():
-            raise ValidationError('Data dla %s jest już zajęta' % self.booking_room.name)
+        self.validate()
 
         # If no value for overall price is provided it will count it
         if self.overall_price is None:
@@ -217,12 +218,41 @@ class Booking(models.Model):
         return super(Booking, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return 'rezerwujący %s, %s. od %s do %s' % (self.booking_person, self.booking_room, self.date_from, self.date_to)
+        return 'rezerwujący %s, %s. od %s do %s' % (
+            self.booking_person, self.booking_room, self.date_from, self.date_to)
 
     def __str__(self):
-        return 'rezerwujący %s, %s. od %s do %s' % (self.booking_person, self.booking_room, self.date_from, self.date_to)
+        return 'rezerwujący %s, %s. od %s do %s' % (
+            self.booking_person, self.booking_room, self.date_from, self.date_to)
 
     class Meta:
         verbose_name_plural = "Rezerwacje"
         verbose_name = verbose_name_plural
         ordering = ('-reservation_date',)
+
+
+class RoomPhoto(models.Model):
+    room = models.ForeignKey(to=BookingRoom,related_name='room',verbose_name='pokój')
+    image = models.ImageField(verbose_name='Zdjęcie')
+
+    def __unicode__(self):
+        return self.room.name
+
+    class Meta:
+        verbose_name = 'Zdjęcie pokoju'
+        verbose_name_plural = 'Zdjęcia pokoju'
+
+
+class HousePhoto(models.Model):
+    house = models.ForeignKey(to=BookingHouse, related_name='house', verbose_name='Budynek')
+    image = models.ImageField(verbose_name='Zdjęcie')
+
+    def __unicode__(self):
+        return self.house.name
+
+    class Meta:
+        verbose_name = 'Zdjęcie budynku'
+        verbose_name_plural = 'Zdjęcia budynku'
+
+class Employee(User):
+    pass
