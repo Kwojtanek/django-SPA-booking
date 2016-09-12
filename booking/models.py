@@ -134,6 +134,8 @@ class BookingRoom(models.Model):
     television = models.BooleanField(verbose_name=_('Telewizor'), default=True)
     kitchen = models.BooleanField(verbose_name=_('Aneks kuchenny'), default=False)
     internet = models.BooleanField(verbose_name=_("WiFi/internet"), default=True)
+    air_conditioning = models.BooleanField(verbose_name='Klimatyzacja',default=False)
+    pets_allowed = models.BooleanField(verbose_name='Zwierzęta', default=False)
     bed = models.CharField(verbose_name=_('Łóżka'), max_length=64, blank=True)
     max_people = models.PositiveIntegerField(verbose_name=_('Maksymalna ilość osób'), null=True)
     price = models.PositiveIntegerField(verbose_name='Cena za jedną dobę', null=True)
@@ -232,8 +234,8 @@ class Booking(models.Model):
 
 
 class RoomPhoto(models.Model):
-    room = models.ForeignKey(to=BookingRoom,related_name='room',verbose_name='pokój')
-    image = models.ImageField(verbose_name='Zdjęcie')
+    room = models.ForeignKey(to=BookingRoom,related_name='room_photos',verbose_name='pokój')
+    image = models.ImageField(upload_to='media/',verbose_name='Zdjęcie')
 
     def __unicode__(self):
         return self.room.name
@@ -244,8 +246,8 @@ class RoomPhoto(models.Model):
 
 
 class HousePhoto(models.Model):
-    house = models.ForeignKey(to=BookingHouse, related_name='house', verbose_name='Budynek')
-    image = models.ImageField(verbose_name='Zdjęcie')
+    house = models.ForeignKey(to=BookingHouse, related_name='house_photos', verbose_name='Budynek')
+    image = models.ImageField(upload_to='media/',verbose_name='Zdjęcie')
 
     def __unicode__(self):
         return self.house.name

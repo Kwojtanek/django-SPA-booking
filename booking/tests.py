@@ -52,37 +52,6 @@ class AvailabilityTestCase(TestCase):
         BookingRoom.objects.create(name='Pokój', price=45)
         BookingRoom.objects.create(name='Apartament', price=100)
 
-        # Booking.objects.create(additional_info='t1',
-        #                        booking_person=BookingPerson.objects.get(pk=1),
-        #                        booking_room=BookingRoom.objects.get(pk=1),
-        #                        date_from=timezone.now().date() - timezone.timedelta(1),
-        #                        date_to=timezone.now().date()  + timezone.timedelta(12))
-        # Booking.objects.create(additional_info='t2',
-        #                        booking_person=BookingPerson.objects.get(pk=1),
-        #                        booking_room=BookingRoom.objects.get(pk=2),
-        #                        date_from=timezone.now().date(),
-        #                        date_to=timezone.now().date()  + timezone.timedelta(12))
-        # Booking.objects.create(additional_info='t3',
-        #                        booking_person=BookingPerson.objects.get(pk=1),
-        #                        booking_room=BookingRoom.objects.get(pk=1),
-        #                        date_from=timezone.now().date() + timezone.timedelta(12),
-        #                        date_to=timezone.now().date() + datetime.timedelta(13))
-        #
-        # Booking.objects.create(additional_info='t4',
-        #                        booking_person=BookingPerson.objects.get(pk=1),
-        #                        booking_room=BookingRoom.objects.get(pk=1),
-        #                        date_from=timezone.now().date() - timezone.timedelta(12),
-        #                        date_to=timezone.now().date() + timezone.timedelta(12))
-        # Booking.objects.create(additional_info='t5',
-        #                        booking_person=BookingPerson.objects.get(pk=1),
-        #                        booking_room=BookingRoom.objects.get(pk=2),
-        #                        date_from=timezone.now().date(),
-        #                        date_to=timezone.now().date()  + timezone.timedelta(12))
-        # Booking.objects.create(additional_info='t6',
-        #                        booking_person=BookingPerson.objects.get(pk=1),
-        #                        booking_room=BookingRoom.objects.get(pk=1),
-        #                        date_from=timezone.now().date() + timezone.timedelta(12),
-        #                        date_to=timezone.now().date() + datetime.timedelta(13))
     def test_instance(self):
         #Test cases for is_colliding function:
         #   -Theres no entries in db so :returns Empty query
