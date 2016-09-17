@@ -26,10 +26,14 @@ class BookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
 
+class SimpleBookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model =Booking
+
 class BookingPersonDetailSerializer(serializers.ModelSerializer):
-    booking_person = BookingSerializer(
+    bookings= SimpleBookingSerializer(
         many=True,
         read_only=True
     )
     class Meta:
-        model = Booking
+        model = BookingPerson

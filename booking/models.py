@@ -81,7 +81,7 @@ class BookingPerson(AbstractBaseUser):
 
     identification_number = models.CharField(max_length=32, blank=True, verbose_name=_('Nr. dowodu/PESEL'))
     additional_info = models.TextField(blank=True, verbose_name=_('Dodatkowe informacje'))
-    date_joined = models.DateTimeField(_('Data utworzenia'), default=timezone.now)
+    date_joined = models.DateTimeField(_('Data utworzenia'), default=timezone.now,blank=True,null=True)
 
     is_active = models.BooleanField(
         _('Aktywny'),
@@ -165,9 +165,9 @@ class Booking(models.Model):
     :date_from booked room
     :date_to booked room
     """
-    booking_person = models.ForeignKey(BookingPerson, related_name='booking_person',
+    booking_person = models.ForeignKey(BookingPerson, related_name='bookings',
                                        verbose_name='Rezerwujący')
-    booking_room = models.ForeignKey(BookingRoom, related_name='booking_room',
+    booking_room = models.ForeignKey(BookingRoom, related_name='bookings',
                                      verbose_name=_('Pokój'))
     reservation_date = models.DateTimeField(default=timezone.now, verbose_name=_('Data dokonania rezerwacji.'))
     date_from = models.DateField(verbose_name=_('Rezerwacja od'))

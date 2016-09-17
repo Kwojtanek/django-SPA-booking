@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
-from .models import BookingHouse, BookingPerson, BookingRoom, Booking
+from booking.models import BookingHouse, BookingPerson, BookingRoom, Booking
 import datetime
 # Create your tests here.
 
