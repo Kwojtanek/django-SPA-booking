@@ -81,7 +81,7 @@ class BookingPerson(AbstractBaseUser):
 
     identification_number = models.CharField(max_length=32, blank=True, verbose_name=_('Nr. dowodu/PESEL'))
     additional_info = models.TextField(blank=True, verbose_name=_('Dodatkowe informacje'))
-    date_joined = models.DateTimeField(_('Data utworzenia'), default=timezone.now,blank=True,null=True)
+    date_joined = models.DateTimeField(_('Data utworzenia'), default=timezone.now)
 
     is_active = models.BooleanField(
         _('Aktywny'),

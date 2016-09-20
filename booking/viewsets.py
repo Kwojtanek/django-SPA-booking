@@ -1,13 +1,12 @@
-from rest_framework import status
-from rest_framework import viewsets
-from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework.viewsets import ModelViewSet
 
 from .models import BookingPerson
-from .serializers import BookingPersonDetailSerializer, BookingPersonSerializer
-from django.shortcuts import get_object_or_404
+from .serializers import BookingPersonSerializer
+from .permissions import BookingPersonPermission
 
 
-class BookingPersonViewSet(viewsets.ViewSet):
+class BookingPersonViewSet(ModelViewSet):
     """
     Class provides api about person making booking:
     It should contain:
@@ -16,31 +15,6 @@ class BookingPersonViewSet(viewsets.ViewSet):
         -also update(PUT), delete(DELETE), create(POST) (CRUD) person Permissions: making reservation person, employee and admin
 
     """
-    def list(self,request):
-        queryset = BookingPerson.objects.all()
-        serializer = BookingPersonSerializer(queryset,many=True)
-        return Response(serializer.data)
-
-    def retrieve(self, request,pk):
-        queryset = BookingPerson.objects.all()
-        user = get_object_or_404(queryset, pk=pk)
-        serializer = BookingPersonDetailSerializer(user)
-        return Response(serializer.data)
-
-    def delete(self, request, pk):
-        try:
-            Bp = BookingPerson.objects.get(pk=pk)
-            Bp.delete()
-            return Response(status=status.HTTP_200_OK)
-        except:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-    def create(self,request):
-        serializer = BookingPersonSerializer(BookingPerson(), request.data)
-        if serializer.is_valid():
-            B = BookingPerson(**request.data)
-            B.save()
-            return Response(serializer.data,status=status.HTTP_201_CREATED)
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-    def update(self,request,pk):
-        pass
+    queryset = BookingPerson.objects.all()
+    serializer_class = BookingPersonSerializer
+    permission_classes = (AllowAny,)

@@ -1,9 +1,6 @@
 from rest_framework import permissions
 
-
 class BookingPersonPermission(permissions.BasePermission):
-    """
-    Booking person can:
-        -CRUD Booking object?
-
-    """
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            pass

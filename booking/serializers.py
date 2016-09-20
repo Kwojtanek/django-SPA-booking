@@ -25,15 +25,3 @@ class BookingSerializer(serializers.ModelSerializer):
     days_count = serializers.ReadOnlyField(read_only=True)
     class Meta:
         model = Booking
-
-class SimpleBookingSerializer(serializers.ModelSerializer):
-    class Meta:
-        model =Booking
-
-class BookingPersonDetailSerializer(serializers.ModelSerializer):
-    bookings= SimpleBookingSerializer(
-        many=True,
-        read_only=True
-    )
-    class Meta:
-        model = BookingPerson
