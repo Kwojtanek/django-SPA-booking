@@ -16,13 +16,17 @@ class BookingHouseAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
     inlines = (HousePhotoInline,)
+    list_display = ('house_type', 'name', 'street', 'street_nr', 'city', 'city_code')
+
+
 class BookingRoomPhotosInline(admin.StackedInline):
     model = RoomPhoto
 class BookingRoomAdmin(admin.ModelAdmin):
     inlines = (BookingRoomPhotosInline,)
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ('booking_room','booking_person','status', 'payment_status', 'reservation_date',
+    list_display = ('choose_booking', 'booking_room','booking_person','status', 'payment_status', 'reservation_date',
                     'date_from', 'date_to', 'overall_price')
+
 admin.site.register(BookingHouse,BookingHouseAdmin)
 admin.site.register(BookingPerson)
 admin.site.register(BookingRoom, BookingRoomAdmin)

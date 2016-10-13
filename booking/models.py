@@ -7,6 +7,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, UserManager, User
 from django.utils import timezone
 from django.core.mail import send_mail
+from django.utils.html import format_html
 
 
 class BookingHouse(models.Model):
@@ -213,13 +214,10 @@ class Booking(models.Model):
         return False
 
     def validate(self):
-        try:
-            if self.is_colliding():
-                raise ValidationError('Data dla %s jest już zajęta' % self.booking_room.name)
-            if self.days_count() <= 0:
-                raise ValidationError('Data przyjazdu nie może być taka sama ani późniejsza niż data wyjazdu')
-        except:
-            raise SystemError('Coś poszło nie tak')
+        if self.is_colliding():
+            raise ValidationError('Data dla %s jest już zajęta' % self.booking_room.name)
+        if self.days_count() <= 0:
+            raise ValidationError('Data przyjazdu nie może być taka sama ani późniejsza niż data wyjazdu')
 
     def clean(self):
         self.validate()
@@ -231,7 +229,9 @@ class Booking(models.Model):
         if self.overall_price is None:
             self.overall_price = self.booking_room.price * self.days_count()
         return super(Booking, self).save(*args, **kwargs)
-
+    def choose_booking(self):
+        return format_html('<a href="{}" class="changelink"><span>Zmień</span></a>',self.pk)
+    choose_booking.short_description = 'Rezerwacja'
     def __unicode__(self):
         return 'rezerwujący %s, %s. od %s do %s' % (
             self.booking_person, self.booking_room, self.date_from, self.date_to)
@@ -239,6 +239,7 @@ class Booking(models.Model):
     def __str__(self):
         return 'rezerwujący %s, %s. od %s do %s' % (
             self.booking_person, self.booking_room, self.date_from, self.date_to)
+
 
     class Meta:
         verbose_name_plural = "Rezerwacje"

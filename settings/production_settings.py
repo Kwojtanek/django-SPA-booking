@@ -78,8 +78,12 @@ WSGI_APPLICATION = 'settings.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'm1509_booking',
+        'USER': 'm1509_booking',
+        'PASSWORD': 'Zg8E6wevwozvEndxVbpL',
+        'HOST': 'mysql4.mydevil.net',
+        'PORT': '',
     }
 }
 
@@ -106,7 +110,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
 
 LANGUAGE_CODE = 'pl'
-TIME_ZONE = 'Europe/Warsaw'
+
+TIME_ZONE = 'Poland'
 
 USE_I18N = True
 
@@ -119,7 +124,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = ['static']
+MEDIA_URL = '/media/'
+
+ENV_PATH = os.path.abspath(os.path.dirname(__file__))
+STATIC_ROOT = os.path.join(ENV_PATH, '../public/static/')
+MEDIA_ROOT = os.path.join(ENV_PATH, '../public/media/')
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
