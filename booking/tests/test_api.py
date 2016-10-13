@@ -18,13 +18,13 @@ class BookingPersonTests(APITestCase):
         BookingPerson.objects.create(**data2)
     def test_create_delete_person(self):
         """
-        Ensure we can create a new account object.
+        Ensures we can create and delete new account object.
         """
         data = {'email':'gacie@gmail.com','password':'12ade12edas213'}
         response = self.client.post('/api/booking-person/',data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(BookingPerson.objects.count(),3)
         B = BookingPerson.objects.get(pk=1)
-        self.assertEqual(B.email,'gacie@gmail.com')
+        self.assertEqual(B.email,'gacie123@gmail.com')
         response = self.client.delete('/api/booking-person/%s/' % B.pk, format='json')
         self.assertEqual(BookingPerson.objects.count(),2)

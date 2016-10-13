@@ -37,6 +37,7 @@ class BookingHouse(models.Model):
                             verbose_name=_('Miejscowość'))
     city_code = models.CharField(max_length=16, verbose_name=_('Kod pocztowy'), blank=True)
     email = models.EmailField(blank=True)
+    phone_number = models.CharField(max_length=16,verbose_name=_('Numer telefonu'), blank=True)
     infos = models.TextField(blank=True, verbose_name=_('Opis obiektu'))
     additional_info = models.TextField(blank=True, verbose_name=_('Dodatkowe informacje'))
 
@@ -127,6 +128,7 @@ class BookingRoom(models.Model):
     """
     Model contains information about room that will be booked
     """
+
     name = models.CharField(max_length=64, default='Pokój', verbose_name=_('Nazwa pokoju'))
     level = models.PositiveIntegerField(verbose_name=_('Piętro'), null=True)
     size = models.CharField(verbose_name=_('Powierzchnia pokoju'), max_length=16, blank=True)
@@ -139,7 +141,6 @@ class BookingRoom(models.Model):
     bed = models.CharField(verbose_name=_('Łóżka'), max_length=64, blank=True)
     max_people = models.PositiveIntegerField(verbose_name=_('Maksymalna ilość osób'), null=True)
     price = models.PositiveIntegerField(verbose_name='Cena za jedną dobę', null=True)
-
     def __unicode__(self):
         return self.name
 
@@ -165,9 +166,9 @@ class Booking(models.Model):
     :date_from booked room
     :date_to booked room
     """
-    booking_person = models.ForeignKey(BookingPerson, related_name='bookings',
+    booking_person = models.ForeignKey(BookingPerson, related_name='booking_person',
                                        verbose_name='Rezerwujący')
-    booking_room = models.ForeignKey(BookingRoom, related_name='bookings',
+    booking_room = models.ForeignKey(BookingRoom, related_name='booking_room',
                                      verbose_name=_('Pokój'))
     reservation_date = models.DateTimeField(default=timezone.now, verbose_name=_('Data dokonania rezerwacji.'))
     date_from = models.DateField(verbose_name=_('Rezerwacja od'))
@@ -179,6 +180,15 @@ class Booking(models.Model):
 
     overall_price = models.PositiveIntegerField(verbose_name=_('Cena za cały pobyt'), blank=True, null=True)
 
+
+    STATUS_CHOICE = (('w','Oczekuje na potwierdzenie'),
+                     ('r','Potwierdzona rezerwacja'),
+                     ('c','Skasowana'))
+
+    status = models.CharField(max_length=4,choices=STATUS_CHOICE,
+                              verbose_name=_('Status rezerwacji'),
+                              default='w')
+    payment_status = models.BooleanField(default=False, verbose_name='Status płatności')
     # --------------Managers-------------#
     objects = models.Manager()
     after_today = AfterTodayManager()
@@ -203,10 +213,13 @@ class Booking(models.Model):
         return False
 
     def validate(self):
-        if self.is_colliding():
-            raise ValidationError('Data dla %s jest już zajęta' % self.booking_room.name)
-        if self.days_count() <= 0:
-            raise ValidationError('Data przyjazdu nie może być taka sama ani późniejsza niż data wyjazdu')
+        try:
+            if self.is_colliding():
+                raise ValidationError('Data dla %s jest już zajęta' % self.booking_room.name)
+            if self.days_count() <= 0:
+                raise ValidationError('Data przyjazdu nie może być taka sama ani późniejsza niż data wyjazdu')
+        except:
+            raise SystemError('Coś poszło nie tak')
 
     def clean(self):
         self.validate()
