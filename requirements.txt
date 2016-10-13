@@ -1,0 +1,5 @@
+djangorestframework==3.3.1
+Django==1.9.7
+Pillow==3.3.1
+pyjwt==1.4.2
+MySQL-python==1.2.5
