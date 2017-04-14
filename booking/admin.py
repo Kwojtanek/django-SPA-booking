@@ -1,21 +1,15 @@
 # coding=utf-8
 from __future__ import unicode_literals
 
-from django.forms import RadioSelect
-from django.utils.translation import ugettext_lazy as _
-from django import forms
-from .models import BookingHouse, BookingPerson,BookingRoom,Booking, HousePhoto, RoomPhoto
+from .models import BookingHouse, BookingPerson,BookingRoom,Booking, RoomPhoto
 from django.contrib import admin
 
-class HousePhotoInline(admin.StackedInline):
-    model = HousePhoto
 
 class BookingHouseAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
     def has_delete_permission(self, request, obj=None):
         return False
-    inlines = (HousePhotoInline,)
     list_display = ('house_type', 'name', 'street', 'street_nr', 'city', 'city_code')
 
 

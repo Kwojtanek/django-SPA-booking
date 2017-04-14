@@ -11,9 +11,12 @@ from django.utils.html import format_html
 
 
 class BookingHouse(models.Model):
-    """
-    Singleton object that keeps information about Hotel, or other residential pension
-    """
+    company_name = models.CharField(max_length=128,
+                                    blank=True,
+                                    null=True,
+                                    verbose_name=_('Nazwa Firmy'))
+
+    nip_number = models.IntegerField(blank=True, null=True, verbose_name=_('NIP'))
     house_choices = (('Pensjonat', 'Pensjonat'), ('Kemping', 'Kemping'),
                      ('Pole biwakowe', 'Pole biwakowe'), ('Dom wycieczkowy', 'Dom wycieczkowy'),
                      ('Hotel', 'Hotel'), ('Motel', 'Motel'), ('Schronisko', 'Schronisko'),
@@ -36,24 +39,38 @@ class BookingHouse(models.Model):
     city = models.CharField(blank=False,
                             max_length=128,
                             verbose_name=_('Miejscowość'))
-    city_code = models.CharField(max_length=16, verbose_name=_('Kod pocztowy'), blank=True)
+    city_code = models.CharField(max_length=16,
+                                 verbose_name=_('Kod pocztowy'),
+                                 blank=True)
     email = models.EmailField(blank=True)
-    phone_number = models.CharField(max_length=16,verbose_name=_('Numer telefonu'), blank=True)
-    infos = models.TextField(blank=True, verbose_name=_('Opis obiektu'))
-    additional_info = models.TextField(blank=True, verbose_name=_('Dodatkowe informacje'))
+    phone_number = models.CharField(max_length=16,
+                                    verbose_name=_('Numer telefonu'),
+                                    blank=True)
+    infos = models.TextField(blank=True,
+                             verbose_name=_('Opis obiektu'))
+    additional_info = models.TextField(blank=True,
+                                       verbose_name=_('Dodatkowe informacje'))
+
+    climat_tax = models.IntegerField(blank=True,
+                                     verbose_name=_('Wysokość Taksy klimatycznej'),
+                                     null=True)
+
+    def nip_validator(self):
+        if not len(str(self.nip_number)) == 10:
+            raise ValidationError('Numer nip powinien składać się z 10 cyfr.')
 
     def save(self, *args, **kwargs):
-        self.pk = 1
+        self.nip_validator()
         return super(BookingHouse, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return '%s %s' % (self.house_type, self.name)
+        return '%s %s' % self.company_name
 
     def __str__(self):
-        return '%s %s' % (self.house_type, self.name)
+        return '%s %s' % self.company_name
 
     class Meta:
-        verbose_name_plural = "Twój obiekt"
+        verbose_name_plural = "Obiekty"
         verbose_name = verbose_name_plural
 
 
@@ -84,6 +101,8 @@ class BookingPerson(AbstractBaseUser):
     identification_number = models.CharField(max_length=32, blank=True, verbose_name=_('Nr. dowodu/PESEL'))
     additional_info = models.TextField(blank=True, verbose_name=_('Dodatkowe informacje'))
     date_joined = models.DateTimeField(_('Data utworzenia'), default=timezone.now)
+
+    booking_house = models.ForeignKey(to=BookingHouse, related_name='rezerwujacy', null=True, blank=True)
 
     is_active = models.BooleanField(
         _('Aktywny'),
@@ -137,11 +156,14 @@ class BookingRoom(models.Model):
     television = models.BooleanField(verbose_name=_('Telewizor'), default=True)
     kitchen = models.BooleanField(verbose_name=_('Aneks kuchenny'), default=False)
     internet = models.BooleanField(verbose_name=_("WiFi/internet"), default=True)
-    air_conditioning = models.BooleanField(verbose_name='Klimatyzacja',default=False)
+    air_conditioning = models.BooleanField(verbose_name='Klimatyzacja', default=False)
     pets_allowed = models.BooleanField(verbose_name='Zwierzęta', default=False)
     bed = models.CharField(verbose_name=_('Łóżka'), max_length=64, blank=True)
     max_people = models.PositiveIntegerField(verbose_name=_('Maksymalna ilość osób'), null=True)
     price = models.PositiveIntegerField(verbose_name='Cena za jedną dobę', null=True)
+
+    booking_house = models.ForeignKey(to=BookingHouse, related_name='pokoje', null=True, blank=True)
+
     def __unicode__(self):
         return self.name
 
@@ -151,6 +173,18 @@ class BookingRoom(models.Model):
     class Meta:
         verbose_name_plural = "Pokoje"
         verbose_name = "Pokój"
+
+
+class BookingRoomAdditional(models.Model):
+    name = models.CharField(max_length=64)
+    boolean = models.BooleanField(default=True)
+    additional_info = models.CharField(max_length=128, blank=True, null=True, verbose_name=_('Dodatkowe informacje'))
+
+    relation = models.ForeignKey(BookingRoom)
+
+    class Meta:
+        verbose_name = 'Opcje'
+        verbose_name_plural = verbose_name
 
 
 class AfterTodayManager(models.Manager):
@@ -175,21 +209,24 @@ class Booking(models.Model):
     date_from = models.DateField(verbose_name=_('Rezerwacja od'))
     date_to = models.DateField(verbose_name=_('Rezerwacja do'))
     additional_info = models.TextField(verbose_name='Dodatkowe informacje', null=True, blank=True)
+    rezerwation_maker = models.CharField(max_length=256, verbose_name='Dodane przez', null=True, blank=True)
 
     def days_count(self):
         return (self.date_to - self.date_from).days
 
     overall_price = models.PositiveIntegerField(verbose_name=_('Cena za cały pobyt'), blank=True, null=True)
 
+    STATUS_CHOICE = (('w', 'Oczekuje na potwierdzenie'),
+                     ('r', 'Potwierdzona rezerwacja'),
+                     ('c', 'Skasowana'))
 
-    STATUS_CHOICE = (('w','Oczekuje na potwierdzenie'),
-                     ('r','Potwierdzona rezerwacja'),
-                     ('c','Skasowana'))
-
-    status = models.CharField(max_length=4,choices=STATUS_CHOICE,
+    status = models.CharField(max_length=4, choices=STATUS_CHOICE,
                               verbose_name=_('Status rezerwacji'),
                               default='w')
     payment_status = models.BooleanField(default=False, verbose_name='Status płatności')
+
+    booking_house = models.ForeignKey(to=BookingHouse, related_name='rezerwacje', null=True, blank=True)
+
     # --------------Managers-------------#
     objects = models.Manager()
     after_today = AfterTodayManager()
@@ -229,9 +266,11 @@ class Booking(models.Model):
         if self.overall_price is None:
             self.overall_price = self.booking_room.price * self.days_count()
         return super(Booking, self).save(*args, **kwargs)
+
     def choose_booking(self):
-        return format_html('<a href="{}" class="changelink"><span>Zmień</span></a>',self.pk)
+        return format_html('<a href="{}" class="changelink"><span>Zmień</span></a>', self.pk)
     choose_booking.short_description = 'Rezerwacja'
+
     def __unicode__(self):
         return 'rezerwujący %s, %s. od %s do %s' % (
             self.booking_person, self.booking_room, self.date_from, self.date_to)
@@ -240,7 +279,6 @@ class Booking(models.Model):
         return 'rezerwujący %s, %s. od %s do %s' % (
             self.booking_person, self.booking_room, self.date_from, self.date_to)
 
-
     class Meta:
         verbose_name_plural = "Rezerwacje"
         verbose_name = verbose_name_plural
@@ -248,8 +286,8 @@ class Booking(models.Model):
 
 
 class RoomPhoto(models.Model):
-    room = models.ForeignKey(to=BookingRoom,related_name='room_photos',verbose_name='pokój')
-    image = models.ImageField(upload_to='media/',verbose_name='Zdjęcie')
+    room = models.ForeignKey(to=BookingRoom, related_name='room_photos', verbose_name='pokój')
+    image = models.ImageField(upload_to='media/', verbose_name='Zdjęcie')
 
     def __unicode__(self):
         return self.room.name
@@ -258,17 +296,13 @@ class RoomPhoto(models.Model):
         verbose_name = 'Zdjęcie pokoju'
         verbose_name_plural = 'Zdjęcia pokoju'
 
-
-class HousePhoto(models.Model):
-    house = models.ForeignKey(to=BookingHouse, related_name='house_photos', verbose_name='Budynek')
-    image = models.ImageField(upload_to='media/',verbose_name='Zdjęcie')
-
-    def __unicode__(self):
-        return self.house.name
-
-    class Meta:
-        verbose_name = 'Zdjęcie budynku'
-        verbose_name_plural = 'Zdjęcia budynku'
-
 class Employee(User):
-    pass
+    booking_house = models.ForeignKey(to=BookingHouse, related_name='pracownicy', null=True, blank=True)
+
+
+class Payment(models.Model):
+    booking_house = models.ForeignKey(to=BookingHouse, related_name='platnosci', null=True, blank=True)
+    rezervation = models.ForeignKey(to=Booking)
+    client = models.ForeignKey(to=BookingPerson)
+    room = models.ForeignKey(to=BookingRoom)
+
