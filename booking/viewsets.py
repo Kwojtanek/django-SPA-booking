@@ -1,9 +1,11 @@
 from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticated
 
-from .models import BookingPerson
-from .serializers import BookingPersonSerializer
-from .permissions import BookingPersonPermission
+from rest_framework_jwt.authentication import JSONWebTokenAuthentication
+
+from .models import BookingPerson, Employee
+from .serializers import BookingPersonSerializer, EmployeeSerializer
 
 
 class BookingPersonViewSet(ModelViewSet):

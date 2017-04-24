@@ -1,2 +1,2 @@
-Django Single page application Hotel reservation system.
-Early Stage developement
+Django Hotel reservation backend.
+Implemented ORM with JSON WEB TOKEN authorization

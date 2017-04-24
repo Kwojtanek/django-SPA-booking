@@ -1,16 +1,14 @@
 # coding=utf-8
 from __future__ import unicode_literals
 
-from .models import BookingHouse, BookingPerson,BookingRoom,Booking, RoomPhoto
+from .models import BookingHouse, BookingPerson,BookingRoom,Booking, RoomPhoto, Employee
 from django.contrib import admin
 
 
 class BookingHouseAdmin(admin.ModelAdmin):
-    def has_add_permission(self, request):
-        return False
-    def has_delete_permission(self, request, obj=None):
-        return False
     list_display = ('house_type', 'name', 'street', 'street_nr', 'city', 'city_code')
+    class Meta:
+        fields = ()
 
 
 class BookingRoomPhotosInline(admin.StackedInline):
@@ -23,5 +21,7 @@ class BookingAdmin(admin.ModelAdmin):
 
 admin.site.register(BookingHouse,BookingHouseAdmin)
 admin.site.register(BookingPerson)
+admin.site.register(Employee)
 admin.site.register(BookingRoom, BookingRoomAdmin)
 admin.site.register(Booking,BookingAdmin)
+

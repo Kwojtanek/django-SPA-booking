@@ -1,6 +1,8 @@
 # coding=utf-8
 from __future__ import unicode_literals
 
+import datetime
+
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from django.db import models
@@ -8,9 +10,17 @@ from django.contrib.auth.models import AbstractBaseUser, UserManager, User
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.utils.html import format_html
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from .token import RandomTokenGenerator
 
 
 class BookingHouse(models.Model):
+
+    #Unique field main identifier
+    token = models.CharField(_('UUID'), max_length=8, null=False, blank=True, unique=True, db_index=True)
+
     company_name = models.CharField(max_length=128,
                                     blank=True,
                                     null=True,
@@ -55,19 +65,27 @@ class BookingHouse(models.Model):
                                      verbose_name=_('Wysokość Taksy klimatycznej'),
                                      null=True)
 
+    last_change = models.TimeField(auto_now=True)
+
     def nip_validator(self):
-        if not len(str(self.nip_number)) == 10:
-            raise ValidationError('Numer nip powinien składać się z 10 cyfr.')
+        if self.nip_number:
+            if not len(str(self.nip_number)) == 10:
+                raise ValidationError('Numer nip powinien składać się z 10 cyfr.')
+
+    def generate_token(self):
+        if self.pk is None:
+            self.token = RandomTokenGenerator().make_token(8)
 
     def save(self, *args, **kwargs):
+        self.generate_token()
         self.nip_validator()
         return super(BookingHouse, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return '%s %s' % self.company_name
+        return '%s' % self.company_name
 
     def __str__(self):
-        return '%s %s' % self.company_name
+        return '%s' % self.company_name
 
     class Meta:
         verbose_name_plural = "Obiekty"
@@ -102,7 +120,7 @@ class BookingPerson(AbstractBaseUser):
     additional_info = models.TextField(blank=True, verbose_name=_('Dodatkowe informacje'))
     date_joined = models.DateTimeField(_('Data utworzenia'), default=timezone.now)
 
-    booking_house = models.ForeignKey(to=BookingHouse, related_name='rezerwujacy', null=True, blank=True)
+    booking_house = models.ForeignKey(to=BookingHouse, to_field='token', related_name='rezerwujacy', null=True, blank=True)
 
     is_active = models.BooleanField(
         _('Aktywny'),
@@ -162,7 +180,7 @@ class BookingRoom(models.Model):
     max_people = models.PositiveIntegerField(verbose_name=_('Maksymalna ilość osób'), null=True)
     price = models.PositiveIntegerField(verbose_name='Cena za jedną dobę', null=True)
 
-    booking_house = models.ForeignKey(to=BookingHouse, related_name='pokoje', null=True, blank=True)
+    booking_house = models.ForeignKey(to=BookingHouse, related_name='pokoje', to_field='token', null=True, blank=True)
 
     def __unicode__(self):
         return self.name
@@ -180,7 +198,7 @@ class BookingRoomAdditional(models.Model):
     boolean = models.BooleanField(default=True)
     additional_info = models.CharField(max_length=128, blank=True, null=True, verbose_name=_('Dodatkowe informacje'))
 
-    relation = models.ForeignKey(BookingRoom)
+    relation = models.ForeignKey(BookingRoom, related_name='dodatkowo')
 
     class Meta:
         verbose_name = 'Opcje'
@@ -225,7 +243,7 @@ class Booking(models.Model):
                               default='w')
     payment_status = models.BooleanField(default=False, verbose_name='Status płatności')
 
-    booking_house = models.ForeignKey(to=BookingHouse, related_name='rezerwacje', null=True, blank=True)
+    booking_house = models.ForeignKey(to=BookingHouse, related_name='rezerwacje', to_field='token', null=True, blank=True)
 
     # --------------Managers-------------#
     objects = models.Manager()
@@ -263,6 +281,7 @@ class Booking(models.Model):
         self.validate()
 
         # If no value for overall price is provided it will count it
+        BookingHouse.objects.get(token=self.booking_house.token).save()
         if self.overall_price is None:
             self.overall_price = self.booking_room.price * self.days_count()
         return super(Booking, self).save(*args, **kwargs)
@@ -297,11 +316,13 @@ class RoomPhoto(models.Model):
         verbose_name_plural = 'Zdjęcia pokoju'
 
 class Employee(User):
-    booking_house = models.ForeignKey(to=BookingHouse, related_name='pracownicy', null=True, blank=True)
-
+    user = models.OneToOneField(User)
+    booking_house = models.ForeignKey(to=BookingHouse, related_name='pracownicy', to_field='token',null=True, blank=True)
+    is_manager = models.BooleanField(_('manager'),default=False)
+    is_employee = models.BooleanField(_('Pracownik'), default=True)
 
 class Payment(models.Model):
-    booking_house = models.ForeignKey(to=BookingHouse, related_name='platnosci', null=True, blank=True)
+    booking_house = models.ForeignKey(to=BookingHouse, related_name='platnosci', to_field='token', null=True, blank=True)
     rezervation = models.ForeignKey(to=Booking)
     client = models.ForeignKey(to=BookingPerson)
     room = models.ForeignKey(to=BookingRoom)
